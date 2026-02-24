@@ -1,0 +1,139 @@
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import type { Recommendation, SoilInput } from "@/lib/recommendations";
+import { generatePDFReport } from "@/lib/pdf-report";
+import { Download, CloudRain, Sprout, FlaskConical, FileText, ArrowLeft } from "lucide-react";
+
+interface Props {
+  result: Recommendation;
+  input: SoilInput;
+  onBack: () => void;
+}
+
+export default function RecommendationResults({ result, input, onBack }: Props) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8"
+    >
+      {/* Header actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <Button variant="ghost" onClick={onBack} className="text-muted-foreground">
+          <ArrowLeft className="mr-2 h-4 w-4" /> New Analysis
+        </Button>
+        <Button
+          onClick={() => generatePDFReport(input, result)}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-golden"
+        >
+          <Download className="mr-2 h-4 w-4" /> Download PDF Report
+        </Button>
+      </div>
+
+      {/* Rainfall & Assessment */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-body font-semibold text-muted-foreground flex items-center gap-2">
+              <CloudRain className="h-4 w-4" /> Rainfall Forecast — {input.district.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-display font-bold text-foreground">{result.forecastedRainfall} mm</p>
+            <Badge
+              variant={result.rainfallCategory === "High" ? "default" : result.rainfallCategory === "Low" ? "destructive" : "secondary"}
+              className="mt-2"
+            >
+              {result.rainfallCategory} Rainfall
+            </Badge>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-body font-semibold text-muted-foreground flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Soil Assessment
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-foreground leading-relaxed">{result.soilAssessment}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Crop Recommendations */}
+      <section>
+        <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+          <Sprout className="h-5 w-5 text-primary" /> Top Crop Recommendations
+        </h2>
+        <div className="space-y-3">
+          {result.crops.map((crop, i) => (
+            <motion.div
+              key={crop.crop}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <Card className="bg-card border-border hover:shadow-golden transition-shadow">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <span className="text-3xl">{crop.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="font-display font-bold text-foreground">{crop.crop}</h3>
+                      <Badge variant="outline" className="shrink-0 text-xs">{crop.season}</Badge>
+                    </div>
+                    <Progress value={crop.score} className="h-2 mb-1.5" />
+                    <p className="text-xs text-muted-foreground truncate">{crop.reason}</p>
+                  </div>
+                  <span className="text-lg font-bold text-primary tabular-nums">{crop.score}%</span>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Fertilizer Plan */}
+      <section>
+        <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+          <FlaskConical className="h-5 w-5 text-primary" /> Fertilizer Plan
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {result.fertilizers.map((f, i) => (
+            <motion.div
+              key={f.type}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.1 }}
+            >
+              <Card className="bg-card border-border h-full">
+                <CardContent className="p-4 space-y-2">
+                  <h3 className="font-display font-bold text-foreground text-sm">{f.type}</h3>
+                  <p className="text-lg font-semibold text-primary">{f.applicationRate}</p>
+                  <p className="text-xs text-muted-foreground"><strong>Timing:</strong> {f.timing}</p>
+                  <p className="text-xs text-muted-foreground">{f.notes}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Bottom download */}
+      <div className="text-center pt-4 pb-8">
+        <Button
+          onClick={() => generatePDFReport(input, result)}
+          variant="outline"
+          size="lg"
+          className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+        >
+          <Download className="mr-2 h-4 w-4" /> Download Full Report (PDF)
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
