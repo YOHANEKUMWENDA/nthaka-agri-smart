@@ -47,7 +47,7 @@ interface CropProfile {
   rainfallPreference: ("Low" | "Moderate" | "High")[];
 }
 
-const CROP_PROFILES: CropProfile[] = [
+export const CROP_PROFILES: (CropProfile & { rainfallRange: [number, number] })[] = [
   { name: "Maize", emoji: "🌽", season: "Oct–Apr", nRange: [60, 120], pRange: [30, 60], kRange: [30, 60], phRange: [5.5, 7.5], moistureRange: [40, 70], tempRange: [18, 32], rainfallPreference: ["Moderate", "High"] },
   { name: "Rice", emoji: "🍚", season: "Nov–May", nRange: [80, 140], pRange: [20, 50], kRange: [20, 50], phRange: [5.0, 7.0], moistureRange: [60, 90], tempRange: [20, 35], rainfallPreference: ["High"] },
   { name: "Groundnuts", emoji: "🥜", season: "Nov–Apr", nRange: [10, 40], pRange: [30, 60], kRange: [20, 50], phRange: [5.5, 7.0], moistureRange: [30, 60], tempRange: [20, 30], rainfallPreference: ["Moderate"] },
