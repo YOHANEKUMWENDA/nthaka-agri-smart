@@ -1,19 +1,29 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Sprout, Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, LogOut, History, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.jpeg";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/recommend", label: "Analyze" },
   { to: "/rainfall", label: "Rainfall" },
+  { to: "/history", label: "History" },
+  { to: "/help", label: "Help" },
   { to: "/about", label: "About" },
 ];
 
 export default function NavHeader() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-50">
@@ -40,6 +50,17 @@ export default function NavHeader() {
               </Button>
             </Link>
           ))}
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-sm font-semibold text-muted-foreground hover:text-foreground">
+              <LogOut className="h-4 w-4 mr-1" /> Sign Out
+            </Button>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm" className="bg-golden text-golden-foreground hover:bg-golden/90 font-semibold text-sm ml-2">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </nav>
 
         {/* Mobile hamburger */}
@@ -63,6 +84,21 @@ export default function NavHeader() {
               </Button>
             </Link>
           ))}
+          {user ? (
+            <Button
+              variant="ghost"
+              onClick={() => { handleSignOut(); setOpen(false); }}
+              className="w-full justify-start text-sm font-semibold text-muted-foreground"
+            >
+              <LogOut className="h-4 w-4 mr-2" /> Sign Out
+            </Button>
+          ) : (
+            <Link to="/auth" onClick={() => setOpen(false)}>
+              <Button className="w-full bg-golden text-golden-foreground hover:bg-golden/90 font-semibold text-sm">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </nav>
       )}
     </header>

@@ -11,15 +11,42 @@ import { getDistrictByName, MALAWI_DISTRICTS } from "@/lib/malawi-districts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Mountain } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Recommend() {
   const [result, setResult] = useState<Recommendation | null>(null);
   const [input, setInput] = useState<SoilInput | null>(null);
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("lab");
   const [district, setDistrict] = useState("");
+
+  const saveToHistory = async (soilInput: SoilInput, rec: Recommendation, mode: string) => {
+    if (!user) return;
+    const topCrop = rec.crops[0];
+    await supabase.from("analysis_history").insert({
+      user_id: user.id,
+      district: soilInput.district.name,
+      nitrogen: soilInput.nitrogen,
+      phosphorus: soilInput.phosphorus,
+      potassium: soilInput.potassium,
+      ph: soilInput.ph,
+      moisture: soilInput.moisture,
+      temperature: soilInput.temperature,
+      organic_matter: soilInput.organicMatter,
+      input_mode: mode,
+      recommended_crop: topCrop?.crop || "Unknown",
+      crop_score: topCrop?.score || 0,
+      fertilizer_type: rec.fertilizers?.[0]?.type || null,
+      result_json: rec as any,
+    });
+  };
 
   const handleLabSubmit = (data: SoilInput) => {
     setInput(data);
-    setResult(generateRecommendations(data));
+    const rec = generateRecommendations(data);
+    setResult(rec);
+    saveToHistory(data, rec, "lab");
   };
 
   const handleFieldComplete = (answers: { [step: number]: string }) => {
@@ -28,7 +55,9 @@ export default function Recommend() {
     const vals = fieldAnswersToSoilValues(answers);
     const soilInput: SoilInput = { ...vals, district: d };
     setInput(soilInput);
-    setResult(generateRecommendations(soilInput));
+    const rec = generateRecommendations(soilInput);
+    setResult(rec);
+    saveToHistory(soilInput, rec, "field");
   };
 
   const handleComboSubmit = (vals: {
@@ -39,7 +68,9 @@ export default function Recommend() {
     if (!d) return;
     const soilInput: SoilInput = { ...vals, district: d };
     setInput(soilInput);
-    setResult(generateRecommendations(soilInput));
+    const rec = generateRecommendations(soilInput);
+    setResult(rec);
+    saveToHistory(soilInput, rec, "combo");
   };
 
   const handleBack = () => {
