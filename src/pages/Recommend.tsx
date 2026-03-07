@@ -44,7 +44,9 @@ export default function Recommend() {
 
   const handleLabSubmit = (data: SoilInput) => {
     setInput(data);
-    setResult(generateRecommendations(data));
+    const rec = generateRecommendations(data);
+    setResult(rec);
+    saveToHistory(data, rec, "lab");
   };
 
   const handleFieldComplete = (answers: { [step: number]: string }) => {
@@ -53,7 +55,9 @@ export default function Recommend() {
     const vals = fieldAnswersToSoilValues(answers);
     const soilInput: SoilInput = { ...vals, district: d };
     setInput(soilInput);
-    setResult(generateRecommendations(soilInput));
+    const rec = generateRecommendations(soilInput);
+    setResult(rec);
+    saveToHistory(soilInput, rec, "field");
   };
 
   const handleComboSubmit = (vals: {
@@ -64,7 +68,9 @@ export default function Recommend() {
     if (!d) return;
     const soilInput: SoilInput = { ...vals, district: d };
     setInput(soilInput);
-    setResult(generateRecommendations(soilInput));
+    const rec = generateRecommendations(soilInput);
+    setResult(rec);
+    saveToHistory(soilInput, rec, "combo");
   };
 
   const handleBack = () => {
