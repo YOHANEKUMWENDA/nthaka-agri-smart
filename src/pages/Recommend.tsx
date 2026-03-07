@@ -19,6 +19,7 @@ export default function Recommend() {
   const [input, setInput] = useState<SoilInput | null>(null);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("lab");
+  const [district, setDistrict] = useState("");
 
   const saveToHistory = async (soilInput: SoilInput, rec: Recommendation, mode: string) => {
     if (!user) return;
