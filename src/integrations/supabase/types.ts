@@ -14,7 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_history: {
+        Row: {
+          created_at: string
+          crop_score: number | null
+          district: string
+          fertilizer_type: string | null
+          id: string
+          input_mode: string
+          moisture: number | null
+          nitrogen: number | null
+          organic_matter: number | null
+          ph: number | null
+          phosphorus: number | null
+          potassium: number | null
+          recommended_crop: string
+          result_json: Json | null
+          temperature: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          crop_score?: number | null
+          district: string
+          fertilizer_type?: string | null
+          id?: string
+          input_mode?: string
+          moisture?: number | null
+          nitrogen?: number | null
+          organic_matter?: number | null
+          ph?: number | null
+          phosphorus?: number | null
+          potassium?: number | null
+          recommended_crop: string
+          result_json?: Json | null
+          temperature?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          crop_score?: number | null
+          district?: string
+          fertilizer_type?: string | null
+          id?: string
+          input_mode?: string
+          moisture?: number | null
+          nitrogen?: number | null
+          organic_matter?: number | null
+          ph?: number | null
+          phosphorus?: number | null
+          potassium?: number | null
+          recommended_crop?: string
+          result_json?: Json | null
+          temperature?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
