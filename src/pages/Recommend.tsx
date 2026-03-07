@@ -11,6 +11,8 @@ import { getDistrictByName, MALAWI_DISTRICTS } from "@/lib/malawi-districts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Mountain } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Recommend() {
   const [result, setResult] = useState<Recommendation | null>(null);
