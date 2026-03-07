@@ -37,7 +37,7 @@ export default function Recommend() {
       input_mode: mode,
       recommended_crop: topCrop?.crop || "Unknown",
       crop_score: topCrop?.score || 0,
-      fertilizer_type: rec.fertilizer?.type || null,
+      fertilizer_type: rec.fertilizers?.[0]?.type || null,
       result_json: rec as any,
     });
   };
