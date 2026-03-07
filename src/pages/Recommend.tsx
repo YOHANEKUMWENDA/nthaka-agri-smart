@@ -17,7 +17,29 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function Recommend() {
   const [result, setResult] = useState<Recommendation | null>(null);
   const [input, setInput] = useState<SoilInput | null>(null);
-  const [district, setDistrict] = useState("");
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("lab");
+
+  const saveToHistory = async (soilInput: SoilInput, rec: Recommendation, mode: string) => {
+    if (!user) return;
+    const topCrop = rec.crops[0];
+    await supabase.from("analysis_history").insert({
+      user_id: user.id,
+      district: soilInput.district.name,
+      nitrogen: soilInput.nitrogen,
+      phosphorus: soilInput.phosphorus,
+      potassium: soilInput.potassium,
+      ph: soilInput.ph,
+      moisture: soilInput.moisture,
+      temperature: soilInput.temperature,
+      organic_matter: soilInput.organicMatter,
+      input_mode: mode,
+      recommended_crop: topCrop?.crop || "Unknown",
+      crop_score: topCrop?.score || 0,
+      fertilizer_type: rec.fertilizer?.type || null,
+      result_json: rec as any,
+    });
+  };
 
   const handleLabSubmit = (data: SoilInput) => {
     setInput(data);
