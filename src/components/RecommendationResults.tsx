@@ -211,7 +211,7 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
               {result.fertilizerAdjustment.warnings.length > 0 && (
                 <div className="space-y-1.5 pt-2 border-t border-border">
                   {result.fertilizerAdjustment.warnings.map((w, i) => (
-                    <div key={i} className="flex gap-2 items-start text-sm text-yellow-800 dark:text-yellow-200">
+                    <div key={i} className="flex gap-2 items-start text-sm text-accent-foreground">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>{w}</span>
                     </div>
