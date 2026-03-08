@@ -1,4 +1,7 @@
 import { type District, forecastRainfall } from "./malawi-districts";
+import { predictCrop, CROP_STATISTICS, MALAWI_CROP_MAP } from "./crop-dataset";
+import { adjustForRainfall, getSoilAlerts, type FertilizerAdjustment, type SoilAlert, type ApplicationStep } from "./fertilizer-adjuster";
+import { getStationForDistrict, forecastEWMA, getRainfallBand, getBandDescription } from "./rainfall-data";
 
 export interface SoilInput {
   nitrogen: number;
@@ -13,7 +16,8 @@ export interface SoilInput {
 
 export interface CropRecommendation {
   crop: string;
-  score: number; // 0-100 suitability score
+  score: number;
+  confidence: number;
   reason: string;
   season: string;
   emoji: string;
@@ -31,80 +35,60 @@ export interface Recommendation {
   fertilizers: FertilizerPlan[];
   forecastedRainfall: number;
   rainfallCategory: string;
+  rainfallBand: string;
+  rainfallBandDescription: string;
   soilAssessment: string;
+  soilAlerts: SoilAlert[];
+  fertilizerAdjustment: FertilizerAdjustment | null;
+  mlPrediction: {
+    crop: string;
+    confidence: number;
+    alternatives: { crop: string; confidence: number }[];
+    algorithm: string;
+  } | null;
 }
 
-interface CropProfile {
-  name: string;
-  emoji: string;
-  season: string;
-  nRange: [number, number];
-  pRange: [number, number];
-  kRange: [number, number];
-  phRange: [number, number];
-  moistureRange: [number, number];
-  tempRange: [number, number];
-  rainfallPreference: ("Low" | "Moderate" | "High")[];
-}
-
-export const CROP_PROFILES: (CropProfile & { rainfallRange: [number, number] })[] = [
-  { name: "Maize", emoji: "🌽", season: "Oct–Apr", nRange: [60, 120], pRange: [30, 60], kRange: [30, 60], phRange: [5.5, 7.5], moistureRange: [40, 70], tempRange: [18, 32], rainfallPreference: ["Moderate", "High"], rainfallRange: [500, 900] },
-  { name: "Rice", emoji: "🍚", season: "Nov–May", nRange: [80, 140], pRange: [20, 50], kRange: [20, 50], phRange: [5.0, 7.0], moistureRange: [60, 90], tempRange: [20, 35], rainfallPreference: ["High"], rainfallRange: [1000, 2000] },
-  { name: "Groundnuts", emoji: "🥜", season: "Nov–Apr", nRange: [10, 40], pRange: [30, 60], kRange: [20, 50], phRange: [5.5, 7.0], moistureRange: [30, 60], tempRange: [20, 30], rainfallPreference: ["Moderate"], rainfallRange: [500, 900] },
-  { name: "Tobacco", emoji: "🍂", season: "Oct–Mar", nRange: [40, 80], pRange: [20, 50], kRange: [40, 80], phRange: [5.5, 6.8], moistureRange: [35, 65], tempRange: [18, 30], rainfallPreference: ["Moderate"], rainfallRange: [600, 1000] },
-  { name: "Soybeans", emoji: "🫘", season: "Nov–Apr", nRange: [10, 30], pRange: [30, 60], kRange: [20, 50], phRange: [6.0, 7.0], moistureRange: [40, 65], tempRange: [20, 30], rainfallPreference: ["Moderate"], rainfallRange: [500, 900] },
-  { name: "Cassava", emoji: "🥔", season: "Oct–Jul", nRange: [20, 60], pRange: [10, 40], kRange: [30, 70], phRange: [5.0, 6.5], moistureRange: [30, 60], tempRange: [22, 35], rainfallPreference: ["Low", "Moderate"], rainfallRange: [400, 1000] },
-  { name: "Sweet Potato", emoji: "🍠", season: "Oct–May", nRange: [20, 50], pRange: [20, 50], kRange: [40, 80], phRange: [5.5, 6.8], moistureRange: [35, 65], tempRange: [20, 30], rainfallPreference: ["Moderate"], rainfallRange: [500, 1000] },
-  { name: "Cotton", emoji: "☁️", season: "Nov–May", nRange: [40, 80], pRange: [20, 40], kRange: [20, 40], phRange: [5.5, 7.5], moistureRange: [35, 60], tempRange: [20, 35], rainfallPreference: ["Low", "Moderate"], rainfallRange: [500, 1000] },
-  { name: "Sorghum", emoji: "🌾", season: "Nov–Apr", nRange: [30, 70], pRange: [20, 40], kRange: [15, 40], phRange: [5.5, 8.0], moistureRange: [25, 55], tempRange: [22, 35], rainfallPreference: ["Low", "Moderate"], rainfallRange: [300, 800] },
-  { name: "Millet", emoji: "🌾", season: "Nov–Mar", nRange: [20, 50], pRange: [15, 35], kRange: [15, 35], phRange: [5.0, 7.5], moistureRange: [20, 50], tempRange: [22, 35], rainfallPreference: ["Low"], rainfallRange: [200, 600] },
-  { name: "Beans", emoji: "🫘", season: "Nov–Mar", nRange: [10, 30], pRange: [30, 60], kRange: [20, 50], phRange: [6.0, 7.5], moistureRange: [40, 65], tempRange: [18, 28], rainfallPreference: ["Moderate"], rainfallRange: [600, 1200] },
-  { name: "Pigeon Peas", emoji: "🌿", season: "Nov–Jul", nRange: [10, 30], pRange: [20, 50], kRange: [15, 40], phRange: [5.0, 7.0], moistureRange: [25, 55], tempRange: [20, 35], rainfallPreference: ["Low", "Moderate"], rainfallRange: [600, 1200] },
-  { name: "Sunflower", emoji: "🌻", season: "Nov–Apr", nRange: [40, 80], pRange: [20, 40], kRange: [20, 40], phRange: [6.0, 7.5], moistureRange: [30, 55], tempRange: [20, 30], rainfallPreference: ["Moderate"], rainfallRange: [400, 800] },
-  { name: "Tea", emoji: "🍵", season: "Year-round", nRange: [60, 120], pRange: [15, 40], kRange: [30, 60], phRange: [4.5, 5.8], moistureRange: [60, 85], tempRange: [15, 25], rainfallPreference: ["High"], rainfallRange: [1200, 2000] },
-  { name: "Sugarcane", emoji: "🎋", season: "Year-round", nRange: [80, 150], pRange: [20, 50], kRange: [40, 80], phRange: [5.5, 7.5], moistureRange: [50, 80], tempRange: [22, 35], rainfallPreference: ["High"], rainfallRange: [1200, 2500] },
-  { name: "Banana", emoji: "🍌", season: "Year-round", nRange: [100, 150], pRange: [60, 100], kRange: [150, 200], phRange: [5.5, 7.0], moistureRange: [60, 85], tempRange: [22, 32], rainfallPreference: ["High"], rainfallRange: [1200, 2000] },
-  { name: "Coffee", emoji: "☕", season: "Year-round", nRange: [80, 120], pRange: [40, 70], kRange: [60, 100], phRange: [5.0, 6.5], moistureRange: [50, 75], tempRange: [18, 28], rainfallPreference: ["High"], rainfallRange: [1200, 2000] },
-  { name: "Chickpea", emoji: "🫘", season: "May–Sep", nRange: [20, 40], pRange: [40, 70], kRange: [40, 70], phRange: [6.0, 8.0], moistureRange: [30, 50], tempRange: [15, 28], rainfallPreference: ["Low"], rainfallRange: [300, 700] },
-  { name: "Lentil", emoji: "🫘", season: "May–Sep", nRange: [20, 40], pRange: [40, 70], kRange: [40, 70], phRange: [6.0, 8.0], moistureRange: [25, 50], tempRange: [15, 25], rainfallPreference: ["Low"], rainfallRange: [300, 600] },
-  { name: "Watermelon", emoji: "🍉", season: "Oct–Mar", nRange: [60, 100], pRange: [40, 70], kRange: [60, 100], phRange: [6.0, 7.0], moistureRange: [40, 65], tempRange: [22, 35], rainfallPreference: ["Moderate"], rainfallRange: [400, 800] },
-  { name: "Mango", emoji: "🥭", season: "Nov–Mar", nRange: [60, 100], pRange: [40, 70], kRange: [60, 100], phRange: [5.5, 7.0], moistureRange: [40, 70], tempRange: [24, 35], rainfallPreference: ["Moderate", "High"], rainfallRange: [900, 1500] },
-  { name: "Papaya", emoji: "🍐", season: "Year-round", nRange: [100, 150], pRange: [50, 80], kRange: [60, 100], phRange: [5.5, 7.0], moistureRange: [50, 75], tempRange: [22, 33], rainfallPreference: ["High"], rainfallRange: [1000, 1800] },
-];
-
-function scoreCrop(crop: CropProfile, input: SoilInput, rainfallCat: string): number {
-  let score = 100;
-  const penalty = (val: number, [min, max]: [number, number]) => {
-    if (val < min) return Math.min(30, (min - val) / min * 50);
-    if (val > max) return Math.min(30, (val - max) / max * 50);
-    return 0;
-  };
-  score -= penalty(input.nitrogen, crop.nRange);
-  score -= penalty(input.phosphorus, crop.pRange);
-  score -= penalty(input.potassium, crop.kRange);
-  score -= penalty(input.ph, crop.phRange) * 1.5;
-  score -= penalty(input.moisture, crop.moistureRange);
-  score -= penalty(input.temperature, crop.tempRange);
-  if (!crop.rainfallPreference.includes(rainfallCat as any)) score -= 15;
-  return Math.max(0, Math.round(score));
-}
+// Keep old CROP_PROFILES export for backward compat
+export const CROP_PROFILES = CROP_STATISTICS.map(c => ({
+  name: MALAWI_CROP_MAP[c.label] || c.label,
+  emoji: c.emoji,
+  season: c.season,
+  nRange: [c.features.N.mean - c.features.N.std, c.features.N.mean + c.features.N.std] as [number, number],
+  pRange: [c.features.P.mean - c.features.P.std, c.features.P.mean + c.features.P.std] as [number, number],
+  kRange: [c.features.K.mean - c.features.K.std, c.features.K.mean + c.features.K.std] as [number, number],
+  phRange: [c.features.ph.mean - c.features.ph.std, c.features.ph.mean + c.features.ph.std] as [number, number],
+  moistureRange: [c.features.humidity.mean - c.features.humidity.std, c.features.humidity.mean + c.features.humidity.std] as [number, number],
+  tempRange: [c.features.temperature.mean - c.features.temperature.std, c.features.temperature.mean + c.features.temperature.std] as [number, number],
+  rainfallRange: [c.features.rainfall.mean - c.features.rainfall.std, c.features.rainfall.mean + c.features.rainfall.std] as [number, number],
+  rainfallPreference: ["Moderate"] as ("Low" | "Moderate" | "High")[],
+}));
 
 function assessSoil(input: SoilInput): string {
   const parts: string[] = [];
-  if (input.nitrogen < 30) parts.push("low nitrogen");
+  if (input.nitrogen < 20) parts.push("very low nitrogen — apply Urea or CAN urgently");
+  else if (input.nitrogen < 40) parts.push("low nitrogen");
   else if (input.nitrogen > 100) parts.push("high nitrogen");
-  if (input.phosphorus < 15) parts.push("low phosphorus");
+  if (input.phosphorus < 10) parts.push("very low phosphorus — apply TSP or DAP");
+  else if (input.phosphorus < 20) parts.push("low phosphorus");
   if (input.potassium < 20) parts.push("low potassium");
-  if (input.ph < 5.5) parts.push("acidic soil");
-  else if (input.ph > 7.5) parts.push("alkaline soil");
-  if (input.organicMatter < 2) parts.push("low organic matter");
+  if (input.ph < 5.5) parts.push("acidic soil (add lime 4–6 weeks before planting)");
+  else if (input.ph > 8.0) parts.push("alkaline soil (add sulphur)");
+  else if (input.ph < 6.0) parts.push("slightly acidic soil");
+  if (input.organicMatter < 1) parts.push("very low organic matter — add compost urgently");
+  else if (input.organicMatter < 2) parts.push("low organic matter");
+  if (input.moisture < 25) parts.push("dry soil conditions");
+  else if (input.moisture > 80) parts.push("waterlogged soil — improve drainage");
   if (parts.length === 0) return "Soil conditions are generally favorable for most crops.";
-  return `Notable conditions: ${parts.join(", ")}. Recommendations have been adjusted accordingly.`;
+  return `Notable conditions: ${parts.join("; ")}. Recommendations have been adjusted accordingly.`;
 }
 
 function generateFertilizerPlan(input: SoilInput, rainfallCat: string): FertilizerPlan[] {
   const plans: FertilizerPlan[] = [];
-  const rainfallAdj = rainfallCat === "High" ? "Split application recommended to reduce leaching." : rainfallCat === "Low" ? "Apply near root zone with irrigation." : "";
+  const rainfallAdj = rainfallCat === "High" || rainfallCat === "Very High"
+    ? "Split application recommended to reduce leaching."
+    : rainfallCat === "Low" || rainfallCat === "Very Low"
+      ? "Apply near root zone. Use micro-dosing if possible."
+      : "";
 
   if (input.nitrogen < 60) {
     plans.push({
@@ -158,22 +142,78 @@ function generateFertilizerPlan(input: SoilInput, rainfallCat: string): Fertiliz
 }
 
 export function generateRecommendations(input: SoilInput): Recommendation {
-  const forecastedRainfall = forecastRainfall(input.district.avgRainfallMm);
+  // Use real station data if available, otherwise fallback to district avg
+  const station = getStationForDistrict(input.district.name);
+  let forecastedRainfall: number;
+  let confidence: number;
+
+  if (station) {
+    const values = Object.values(station.annualRainfall).sort();
+    const result = forecastEWMA(values);
+    forecastedRainfall = result.predicted;
+    confidence = result.confidence;
+  } else {
+    forecastedRainfall = forecastRainfall(input.district.avgRainfallMm);
+    confidence = 70;
+  }
+
+  const rainfallBand = getRainfallBand(forecastedRainfall);
   const rainfallCategory = forecastedRainfall < 800 ? "Low" : forecastedRainfall > 1100 ? "High" : "Moderate";
 
-  const scoredCrops = CROP_PROFILES.map(crop => ({
-    crop: crop.name,
-    score: scoreCrop(crop, input, rainfallCategory),
-    reason: `Suitability based on your soil (N:${input.nitrogen}, P:${input.phosphorus}, K:${input.potassium}, pH:${input.ph}) and ${rainfallCategory.toLowerCase()} rainfall in ${input.district.name}.`,
-    season: crop.season,
-    emoji: crop.emoji,
-  })).sort((a, b) => b.score - a.score);
+  // ML-style prediction using Gaussian Naive Bayes on dataset statistics
+  const mlResult = predictCrop(
+    input.nitrogen,
+    input.phosphorus,
+    input.potassium,
+    input.temperature,
+    input.moisture, // humidity equivalent
+    input.ph,
+    forecastedRainfall
+  );
+
+  // Build crop recommendations from ML prediction
+  const allPredictions = [
+    { crop: mlResult.crop, confidence: mlResult.confidence },
+    ...mlResult.alternatives
+  ];
+
+  const cropStats = CROP_STATISTICS;
+  const crops: CropRecommendation[] = allPredictions.slice(0, 5).map((pred, i) => {
+    const stat = cropStats.find(c => (MALAWI_CROP_MAP[c.label] || c.label) === pred.crop);
+    return {
+      crop: pred.crop,
+      score: Math.max(10, Math.round(95 - i * 12 - (100 - pred.confidence) * 0.3)),
+      confidence: pred.confidence,
+      reason: `ML prediction based on soil (N:${input.nitrogen}, P:${input.phosphorus}, K:${input.potassium}, pH:${input.ph}) and ${rainfallBand} rainfall (${forecastedRainfall}mm) in ${input.district.name}.`,
+      season: stat?.season || "Oct–Apr",
+      emoji: stat?.emoji || "🌱",
+    };
+  });
+
+  // Rainfall-adjusted fertilizer plan for top crop
+  const topCrop = mlResult.crop;
+  const fertAdjustment = adjustForRainfall(forecastedRainfall, topCrop);
+
+  // Soil alerts
+  const soilAlerts = getSoilAlerts(
+    input.nitrogen, input.phosphorus, input.potassium, input.ph, forecastedRainfall
+  );
 
   return {
-    crops: scoredCrops.slice(0, 5),
+    crops,
     fertilizers: generateFertilizerPlan(input, rainfallCategory),
     forecastedRainfall,
     rainfallCategory,
+    rainfallBand,
+    rainfallBandDescription: getBandDescription(forecastedRainfall),
     soilAssessment: assessSoil(input),
+    soilAlerts,
+    fertilizerAdjustment: fertAdjustment,
+    mlPrediction: {
+      crop: mlResult.crop,
+      confidence: mlResult.confidence,
+      alternatives: mlResult.alternatives,
+      algorithm: "Gaussian Naive Bayes (dataset-trained)",
+    },
   };
 }
