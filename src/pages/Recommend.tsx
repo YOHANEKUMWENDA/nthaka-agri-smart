@@ -10,13 +10,15 @@ import { generateRecommendations, type SoilInput, type Recommendation } from "@/
 import { getDistrictByName, MALAWI_DISTRICTS } from "@/lib/malawi-districts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Mountain } from "lucide-react";
+import { Mountain, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function Recommend() {
   const [result, setResult] = useState<Recommendation | null>(null);
   const [input, setInput] = useState<SoilInput | null>(null);
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("lab");
   const [district, setDistrict] = useState("");
@@ -42,11 +44,23 @@ export default function Recommend() {
     });
   };
 
+  const runAnalysis = async (data: SoilInput, mode: string) => {
+    setLoading(true);
+    try {
+      const rec = await generateRecommendations(data);
+      setInput(data);
+      setResult(rec);
+      saveToHistory(data, rec, mode);
+    } catch (err: any) {
+      console.error("Analysis error:", err);
+      toast.error("Analysis failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLabSubmit = (data: SoilInput) => {
-    setInput(data);
-    const rec = generateRecommendations(data);
-    setResult(rec);
-    saveToHistory(data, rec, "lab");
+    runAnalysis(data, "lab");
   };
 
   const handleFieldComplete = (answers: { [step: number]: string }) => {
@@ -54,10 +68,7 @@ export default function Recommend() {
     if (!d) return;
     const vals = fieldAnswersToSoilValues(answers);
     const soilInput: SoilInput = { ...vals, district: d };
-    setInput(soilInput);
-    const rec = generateRecommendations(soilInput);
-    setResult(rec);
-    saveToHistory(soilInput, rec, "field");
+    runAnalysis(soilInput, "field");
   };
 
   const handleComboSubmit = (vals: {
@@ -67,10 +78,7 @@ export default function Recommend() {
     const d = getDistrictByName(district);
     if (!d) return;
     const soilInput: SoilInput = { ...vals, district: d };
-    setInput(soilInput);
-    const rec = generateRecommendations(soilInput);
-    setResult(rec);
-    saveToHistory(soilInput, rec, "combo");
+    runAnalysis(soilInput, "combo");
   };
 
   const handleBack = () => {
@@ -96,7 +104,13 @@ export default function Recommend() {
           </p>
         </motion.div>
 
-        {result && input ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <p className="text-muted-foreground font-semibold">Running server-side ML analysis...</p>
+            <p className="text-xs text-muted-foreground">Gaussian Naive Bayes + EWMA Rainfall Forecast</p>
+          </div>
+        ) : result && input ? (
           <RecommendationResults result={result} input={input} onBack={handleBack} />
         ) : (
           <Tabs defaultValue="lab" className="space-y-6">
@@ -111,7 +125,6 @@ export default function Recommend() {
             </TabsContent>
 
             <TabsContent value="field" className="space-y-6">
-              {/* District selector for field/combo modes */}
               <div className="space-y-3">
                 <Label className="text-base font-display font-semibold flex items-center gap-2">
                   <Mountain className="h-4 w-4 text-primary" /> District
