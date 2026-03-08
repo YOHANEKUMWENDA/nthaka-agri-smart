@@ -16,7 +16,7 @@ interface Props {
 export default function RecommendationResults({ result, input, onBack }: Props) {
   const alertIcon = (type: string) => {
     if (type === "danger") return <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
-    if (type === "warning") return <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0" />;
+    if (type === "warning") return <AlertTriangle className="h-4 w-4 text-accent-foreground shrink-0" />;
     return <Info className="h-4 w-4 text-primary shrink-0" />;
   };
 
