@@ -107,7 +107,7 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
             {result.soilAlerts.map((alert, i) => (
               <div key={i} className={`flex gap-2 items-start p-2 rounded-md text-sm ${
                 alert.type === "danger" ? "bg-destructive/5 text-destructive" 
-                : alert.type === "warning" ? "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/10 dark:text-yellow-200"
+                : alert.type === "warning" ? "bg-accent/20 text-accent-foreground"
                 : "bg-primary/5 text-primary"
               }`}>
                 {alertIcon(alert.type)}
