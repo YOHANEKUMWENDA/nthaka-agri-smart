@@ -2,3 +2,9 @@ project_id = "ohoaqnxhpamzragycofe"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.recommend]
+verify_jwt = false
+
+[functions.rainfall]
+verify_jwt = false
