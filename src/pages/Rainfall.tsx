@@ -157,7 +157,7 @@ export default function Rainfall() {
               <CardContent className="space-y-2">
                 {risks.map((r, i) => (
                   <div key={i} className={`flex gap-2 items-start p-2 rounded-md text-sm ${
-                    r.level === "ok" ? "bg-primary/5 text-primary" : r.level === "danger" ? "bg-destructive/5 text-destructive" : "bg-yellow-50 dark:bg-yellow-900/10 text-yellow-800 dark:text-yellow-200"
+                    r.level === "ok" ? "bg-primary/5 text-primary" : r.level === "danger" ? "bg-destructive/5 text-destructive" : "bg-accent/20 text-accent-foreground"
                   }`}>
                     <span>{r.icon}</span><span>{r.message}</span>
                   </div>
