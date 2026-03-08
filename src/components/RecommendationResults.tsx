@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { Recommendation, SoilInput } from "@/lib/recommendations";
 import { generatePDFReport } from "@/lib/pdf-report";
-import { Download, CloudRain, Sprout, FlaskConical, FileText, ArrowLeft } from "lucide-react";
+import { Download, CloudRain, Sprout, FlaskConical, FileText, ArrowLeft, AlertTriangle, CheckCircle, Info, Cpu, ListChecks } from "lucide-react";
 
 interface Props {
   result: Recommendation;
@@ -14,6 +14,12 @@ interface Props {
 }
 
 export default function RecommendationResults({ result, input, onBack }: Props) {
+  const alertIcon = (type: string) => {
+    if (type === "danger") return <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
+    if (type === "warning") return <AlertTriangle className="h-4 w-4 text-accent-foreground shrink-0" />;
+    return <Info className="h-4 w-4 text-primary shrink-0" />;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -34,6 +40,27 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
         </Button>
       </div>
 
+      {/* ML Prediction Badge */}
+      {result.mlPrediction && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Cpu className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                ML Model Prediction: <span className="text-primary">{result.mlPrediction.crop}</span>
+                <span className="text-muted-foreground ml-2">({result.mlPrediction.confidence}% confidence)</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Algorithm: {result.mlPrediction.algorithm}
+                {result.mlPrediction.alternatives.length > 0 && (
+                  <> · Alternatives: {result.mlPrediction.alternatives.map(a => a.crop).join(", ")}</>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Rainfall & Assessment */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="bg-card border-border">
@@ -44,12 +71,15 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-display font-bold text-foreground">{result.forecastedRainfall} mm</p>
-            <Badge
-              variant={result.rainfallCategory === "High" ? "default" : result.rainfallCategory === "Low" ? "destructive" : "secondary"}
-              className="mt-2"
-            >
-              {result.rainfallCategory} Rainfall
-            </Badge>
+            <div className="flex gap-2 mt-2">
+              <Badge
+                variant={result.rainfallCategory === "High" ? "default" : result.rainfallCategory === "Low" ? "destructive" : "secondary"}
+              >
+                {result.rainfallCategory} Rainfall
+              </Badge>
+              <Badge variant="outline">{result.rainfallBand}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">{result.rainfallBandDescription}</p>
           </CardContent>
         </Card>
 
@@ -64,6 +94,29 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
           </CardContent>
         </Card>
       </div>
+
+      {/* Soil Alerts */}
+      {result.soilAlerts && result.soilAlerts.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" /> Soil Health Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {result.soilAlerts.map((alert, i) => (
+              <div key={i} className={`flex gap-2 items-start p-2 rounded-md text-sm ${
+                alert.type === "danger" ? "bg-destructive/5 text-destructive" 
+                : alert.type === "warning" ? "bg-accent/20 text-accent-foreground"
+                : "bg-primary/5 text-primary"
+              }`}>
+                {alertIcon(alert.type)}
+                <span>{alert.message}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Crop Recommendations */}
       <section>
@@ -122,6 +175,59 @@ export default function RecommendationResults({ result, input, onBack }: Props) 
           ))}
         </div>
       </section>
+
+      {/* Rainfall-Adjusted Application Plan */}
+      {result.fertilizerAdjustment && (
+        <section>
+          <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+            <ListChecks className="h-5 w-5 text-primary" /> Rainfall-Adjusted Application Plan
+          </h2>
+          <Card className="bg-card border-border">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Badge variant="outline">Method: {result.fertilizerAdjustment.applicationMethod}</Badge>
+                <Badge variant="outline">NPK: {result.fertilizerAdjustment.basalNpkKgHa} kg/ha</Badge>
+                <Badge variant="outline">Urea: {result.fertilizerAdjustment.ureaKgHa} kg/ha</Badge>
+                <Badge variant="outline">Splits: {result.fertilizerAdjustment.splits}</Badge>
+              </div>
+
+              {/* Step-by-step plan */}
+              <div className="space-y-3">
+                {result.fertilizerAdjustment.plan.map((step, i) => (
+                  <div key={i} className="flex gap-3 items-start">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{step.timing}</p>
+                      <p className="text-sm text-foreground">{step.action}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{step.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Warnings */}
+              {result.fertilizerAdjustment.warnings.length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-border">
+                  {result.fertilizerAdjustment.warnings.map((w, i) => (
+                    <div key={i} className="flex gap-2 items-start text-sm text-accent-foreground">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Organic advice */}
+              <div className="flex gap-2 items-start p-3 rounded-md bg-primary/5 text-sm">
+                <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <span className="text-foreground">{result.fertilizerAdjustment.organicAdvice}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Bottom download */}
       <div className="text-center pt-4 pb-8">
