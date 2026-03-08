@@ -17,9 +17,7 @@ const features = [
   { icon: "🧪", title: "Three Input Modes", desc: "Lab values, field visual assessment without equipment, or a combination of both. No farmer is left out." },
   { icon: "🌧️", title: "Rainfall Intelligence", desc: "30-year district rainfall data with EWMA seasonal forecasting. Fertilizer plans auto-adjust to your district's expected rainfall." },
   { icon: "🤖", title: "Real Trained Models", desc: "Random Forest crop model (99.55% F1) and fertilizer classifier trained on actual datasets, not rule-based lookups." },
-  { icon: "📱", title: "Mobile-First Design", desc: "Works on any phone. Responsive layout from 375px upward. Accessible everywhere." },
   { icon: "📄", title: "Printable Reports", desc: "Generate and print full crop + fertilizer reports for farmers to take to agri-shops or extension offices." },
-  { icon: "🔌", title: "Flask API Ready", desc: "Full Python backend included. Connects to Flutter mobile app. All endpoints documented and tested." },
 ];
 
 export default function Index() {
