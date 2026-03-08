@@ -1,7 +1,8 @@
 import { type District, forecastRainfall } from "./malawi-districts";
 import { predictCrop, CROP_STATISTICS, MALAWI_CROP_MAP } from "./crop-dataset";
 import { adjustForRainfall, getSoilAlerts, type FertilizerAdjustment, type SoilAlert, type ApplicationStep } from "./fertilizer-adjuster";
-import { getStationForDistrict, forecastEWMA, getRainfallBand, getBandDescription } from "./rainfall-data";
+import { getStationForDistrict, forecastEWMA } from "./rainfall-data";
+import { getRainfallBand, getBandDescription } from "./fertilizer-adjuster";
 
 export interface SoilInput {
   nitrogen: number;
