@@ -13,6 +13,7 @@ import About from "./pages/About";
 import Auth from "./pages/Auth";
 import History from "./pages/History";
 import HelpSupport from "./pages/HelpSupport";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/recommend" element={<ProtectedRoute><Recommend /></ProtectedRoute>} />
             <Route path="/rainfall" element={<Rainfall />} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<HelpSupport />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />
