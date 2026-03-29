@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { to: "/recommend", label: "Analyze" },
   { to: "/rainfall", label: "Rainfall" },
   { to: "/history", label: "History" },
+  { to: "/admin", label: "Dashboard" },
   { to: "/help", label: "Help" },
   { to: "/about", label: "About" },
 ];
