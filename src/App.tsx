@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import History from "./pages/History";
 import HelpSupport from "./pages/HelpSupport";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<HelpSupport />} />
             <Route path="/about" element={<About />} />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Chatbot />
